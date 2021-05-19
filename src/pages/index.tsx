@@ -2,11 +2,12 @@ import { GetStaticProps } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
 import { RichText } from 'prismic-dom';
-// import { format } from 'date-fns';
-// import ptBR from 'date-fns/locale/pt-BR';
+import { format } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 import Prismic from '@prismicio/client';
 import { FiCalendar, FiUser } from 'react-icons/fi';
 // import { useState } from 'react';
+import { useState } from 'react';
 import { getPrismicClient } from '../services/prismic';
 
 import styles from './home.module.scss';
@@ -31,18 +32,82 @@ interface HomeProps {
 }
 
 export default function Home({ postsPagination }: HomeProps): JSX.Element {
+  const formattedPost: Post[] = postsPagination.results.map(post => {
+    return {
+      data: {
+        title: post.data.title,
+        subtitle: post.data.subtitle,
+        author: post.data.author,
+      },
+      first_publication_date: format(
+        new Date(post.first_publication_date),
+        'dd MMM yyyy',
+        {
+          locale: ptBR,
+        }
+      ),
+      uid: post.uid,
+    };
+  });
+
+  const [button, setButton] = useState(true);
+
+  const [posts, setPosts] = useState<Post[]>(formattedPost);
+  const [nextPage, setNextPage] = useState(postsPagination.next_page);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  async function handleNextPage(): Promise<void> {
+    if (currentPage !== 1 && nextPage === null) {
+      return;
+    }
+
+    const postResults = await fetch(`${nextPage}`).then(response =>
+      response.json()
+    );
+
+    setNextPage(postResults.next_page);
+    setCurrentPage(postResults.page);
+
+    const newPosts = postResults.results.map(post => {
+      return {
+        data: {
+          title: post.data.title,
+          subtitle: post.data.subtitle,
+          author: post.data.author,
+        },
+        first_publication_date: format(
+          new Date(post.first_publication_date),
+          'dd MMM yyyy',
+          {
+            locale: ptBR,
+          }
+        ),
+      };
+    });
+
+    if (postResults.next_page === null) {
+      setButton(false);
+    }
+    console.log('mudou a página');
+
+    setPosts([...posts, ...newPosts]);
+  }
+
   return (
     <>
       <Head>
         <title>Spacetraveling</title>
       </Head>
+
       <main className={styles.Container}>
         <img src="/images/Logo.svg" alt="space traveling logo" />
-        {postsPagination.results.map(post => (
+
+        {posts.map(post => (
           <Link key={post.uid} href={`/post/${post.uid}`}>
             <a className={styles.posts}>
               <h2>{post.data.title}</h2>
               <p>{post.data.subtitle}</p>
+
               <div className={styles.postInfo}>
                 <time>
                   <FiCalendar className={styles.icon} />
@@ -55,7 +120,15 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
             </a>
           </Link>
         ))}
-        <a className={styles.loadMore}>Carregar mais posts</a>
+        {nextPage && (
+          <button
+            type="button"
+            className={styles.loadMore}
+            onClick={handleNextPage}
+          >
+            Carregar mais posts
+          </button>
+        )}
       </main>
     </>
   );
@@ -67,7 +140,8 @@ export const getStaticProps: GetStaticProps = async () => {
   const postsResponse = await prismic.query(
     [Prismic.Predicates.at('document.type', 'post')],
     {
-      pageSize: 3,
+      fetch: ['post.title', 'post.subtitle', 'post.author'],
+      pageSize: 1,
       page: 1,
     }
   );
@@ -75,27 +149,24 @@ export const getStaticProps: GetStaticProps = async () => {
   const results = postsResponse.results.map(post => {
     return {
       uid: post.uid,
-      first_publication_date: new Date(
-        post.first_publication_date
-      ).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      }),
+      first_publication_date: post.first_publication_date,
       data: {
-        title: RichText.asText(post.data.title),
-        subtitle: RichText.asText(post.data.subtitle),
-        author: RichText.asText(post.data.author),
+        title: post.data.title,
+        subtitle: post.data.subtitle,
+        author: post.data.author,
       },
     };
   });
 
+  const postsPagination = {
+    next_page: postsResponse.next_page,
+    results,
+  };
+
   return {
     props: {
-      postsPagination: {
-        next_page: postsResponse.next_page,
-        results,
-      },
+      postsPagination,
     },
+    revalidate: 60 * 60, // 1 hour
   };
 };
