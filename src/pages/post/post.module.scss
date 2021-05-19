@@ -1,1 +1,53 @@
-// TODO
+.banner {
+  width: 100%;
+  height: 400px;
+  margin-bottom: 5rem;
+}
+
+.container{
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.postInfo{
+  display: flex;
+  flex-direction:row;
+  margin-bottom: 4rem;
+  color: var(--info);
+
+  time,address {
+    display: flex;
+    align-items: center;
+  }
+
+  address{
+    margin: 0 1.5rem;
+  }
+}
+
+.post{
+  h1{
+    font-weight: bold;
+    font-size: 3rem;
+    letter-spacing: -0.5px;
+    margin-bottom: 1.5rem;
+  }
+
+  h2 {
+    font-style: normal;
+    font-weight: bold;
+    font-size: 2.125rem;
+    margin-bottom: 4rem;
+  }
+
+  p {
+    color: #D7D7D7;
+    line-height: 140%;
+    text-align: justify;
+
+     & + p {
+      margin-top: 1.5rem;
+    }
+  }
+}
