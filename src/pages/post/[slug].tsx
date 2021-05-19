@@ -2,6 +2,8 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import { RichText } from 'prismic-dom';
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi';
+import Prismic from '@prismicio/client';
+import { useRouter } from 'next/router';
 import Header from '../../components/Header';
 import { getPrismicClient } from '../../services/prismic';
 
@@ -29,6 +31,12 @@ interface PostProps {
 }
 
 export default function Post({ post }: PostProps): JSX.Element {
+  const router = useRouter();
+
+  if (router.isFallback) {
+    return <h1>Carregando...</h1>;
+  }
+
   return (
     <>
       <Head>
@@ -68,10 +76,22 @@ export default function Post({ post }: PostProps): JSX.Element {
 }
 
 export const getStaticPaths = async () => {
-  // const prismic = getPrismicClient();
-  // const posts = await prismic.query();
+  const prismic = getPrismicClient();
+
+  const posts = await prismic.query([
+    Prismic.Predicates.at('document.type', 'post'),
+  ]);
+
+  const paths = posts.results.map(post => {
+    return {
+      params: {
+        slug: post.uid,
+      },
+    };
+  });
+
   return {
-    paths: [],
+    paths,
     fallback: true,
   };
 };
@@ -86,10 +106,10 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   const post: Post = {
     first_publication_date: response.first_publication_date,
     data: {
-      title: RichText.asText(response.data.title),
+      title: response.data.title,
       banner: {
         url: response.data.banner.url,
-        author: RichText.asText(response.data.author),
+        author: response.data.author,
       },
       content: response.data.content.map(content => {
         return {
@@ -108,5 +128,6 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     props: {
       post,
     },
+    revalidate: 60 * 60,
   };
 };

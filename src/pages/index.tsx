@@ -50,8 +50,6 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
     };
   });
 
-  const [button, setButton] = useState(true);
-
   const [posts, setPosts] = useState<Post[]>(formattedPost);
   const [nextPage, setNextPage] = useState(postsPagination.next_page);
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,11 +82,6 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
         ),
       };
     });
-
-    if (postResults.next_page === null) {
-      setButton(false);
-    }
-    console.log('mudou a página');
 
     setPosts([...posts, ...newPosts]);
   }
